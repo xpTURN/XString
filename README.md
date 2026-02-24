@@ -1,6 +1,6 @@
 # xpTURN.XString
 
-**ZString** API wrapper package for Unity. ZString does not provide a dedicated API for interpolated or format strings, so this package aims to provide `XString.Format($"...")` and format-string overloads.
+**ZString** API wrapper package for Unity. ZString does not provide a dedicated API for interpolated strings, so this package aims to provide `XString.Format($"...")` and format-string overloads.
 
 - `XString.Format($"...")`: Interpolated string API.
   - Uses ZString's Utf16ValueStringBuilder at compile time so that code is expanded into efficient calls, reducing runtime cost and heap usage.
@@ -14,6 +14,8 @@
 
 ### xpTURN.Polyfill Installation
 
+📦 [xpTURN.Polyfill](https://github.com/xpTURN/Polyfill)
+
 <details>
 <summary>How to add xpTURN.Polyfill to your project (when not installed or configured)</summary>
 
@@ -22,8 +24,6 @@ To use XString (with interpolated strings / C# 10+), you need to modify the proj
 - ⚠️ There can be various ways to set this up. You can skip this section if you have already added it to your project.
 
 ### 1 Install xpTURN.Polyfill
-
-📦 [xpTURN.Polyfill](https://github.com/xpTURN/Polyfill)
 
 1. Open **Window > Package Manager**
 2. Click **+** > **Add package from git URL...**
@@ -36,6 +36,8 @@ https://github.com/xpTURN/Polyfill.git?path=src/Polyfill/Assets/Polyfill
 </details>
 
 ### ZString Installation
+
+📦 [Cysharp/ZString](https://github.com/Cysharp/ZString)
 
 <details>
 <summary>How to add ZString to your project (when not installed)</summary>
