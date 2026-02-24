@@ -33,6 +33,7 @@ https://github.com/xpTURN/Polyfill.git?path=src/Polyfill/Assets/Polyfill
 ```
 
 1. ⚙️ Run Edit > Polyfill > Player Settings > `Apply Additional Compiler Arguments -langversion (All Installed Platforms)`
+
 </details>
 
 ### ZString Installation
@@ -51,6 +52,7 @@ https://github.com/xpTURN/Polyfill.git?path=src/Polyfill/Assets/Polyfill
 ```text
 https://github.com/Cysharp/ZString.git?path=src/ZString.Unity/Assets/Scripts/ZString
 ```
+
 </details>
 
 ## xpTURN.XString – Installation
@@ -89,7 +91,6 @@ XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 
 ### Other APIs
 
-
 | Method                                        | Description                                                         |
 | --------------------------------------------- | ------------------------------------------------------------------- |
 | `XString.CreateStringBuilder()`               | Create Utf16ValueStringBuilder (ZString wrapper)                    |
@@ -97,7 +98,6 @@ XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 | `XString.CreateUtf8StringBuilder()`           | Create Utf8 StringBuilder (ZString wrapper)                         |
 | `XString.Join(separator, values)`             | Join sequence with separator (ZString wrapper)                      |
 | `XString.Concat(values)`                      | Concatenate arguments in order (ZString wrapper)                    |
-
 
 ## Namespace
 
@@ -113,6 +113,7 @@ XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 ```csharp
 _ = XString.Format($"User: {Label} | Score: {Score:N2} | At: {At:yyyy-MM-dd HH:mm} | Rate: {Rate:P1}");
 ```
+
 </details>
 
 <details>
@@ -121,6 +122,7 @@ _ = XString.Format($"User: {Label} | Score: {Score:N2} | At: {At:yyyy-MM-dd HH:m
 ```csharp
 _ = ZString.Format("User: {0} | Score: {1:N2} | At: {2:yyyy-MM-dd HH:mm} | Rate: {3:P1}", Label, Score, At, Rate);
 ```
+
 </details>
 
 <details>
@@ -129,6 +131,7 @@ _ = ZString.Format("User: {0} | Score: {1:N2} | At: {2:yyyy-MM-dd HH:mm} | Rate:
 ```csharp
 _ = $"User: {Label} | Score: {Score:N2} | At: {At:yyyy-MM-dd HH:mm} | Rate: {Rate:P1}";
 ```
+
 </details>
 
 <details>
@@ -137,6 +140,7 @@ _ = $"User: {Label} | Score: {Score:N2} | At: {At:yyyy-MM-dd HH:mm} | Rate: {Rat
 ```csharp
 _ = string.Format("User: {0} | Score: {1:N2} | At: {2:yyyy-MM-dd HH:mm} | Rate: {3:P1}", Label, Score, At, Rate);
 ```
+
 </details>
 
 <details>
@@ -154,6 +158,7 @@ sb.Append(" | Rate: ");
 sb.AppendFormat("{0:P1}", Rate);
 _ = sb.ToString();
 ```
+
 </details>
 
 <details>
@@ -171,6 +176,7 @@ sb.Append(" | Rate: ");
 sb.AppendFormat("{0:P1}", Rate);
 _ = sb.ToString();
 ```
+
 </details>
 
 <details>
@@ -188,23 +194,22 @@ sb.Append(" | Rate: ");
 sb.AppendFormat("{0:P1}", Rate);
 _ = sb.ToString();
 ```
+
 </details>
 
 ### Benchmark results
 
 #### GC (Time.GC) — lower is better
 
-
 | Benchmark                    | GC Sum  | Note |
 | ---------------------------- | ------- | ---- |
 | Utf16ValueStringBuilder      | 80      | 👍   |
 | XString (interpolated)       | 80      | 👍   |
 | ZString (format)             | 80      | 👍   |
-| StringBuilder (capacity:128) | 140–180 |      |
+| StringBuilder (128)          | 140–180 |      |
 | String (format)              | 200     |      |
 | String (interpolated)        | 200     |      |
 | StringBuilder                | 140–340 |      |
-
 
 - Utf16ValueStringBuilder, XString, and ZString all show similar GC pressure. Only the final `new string()` for the return value is allocated.
 - For StringBuilder, setting capacity in advance helps. Each `AppendFormat` still creates temporary strings.
@@ -214,17 +219,15 @@ _ = sb.ToString();
 
 #### Time (ms) — lower is better
 
-
 | Benchmark                  | Min    | Median | Max    | Avg    | StdDev |
 | -------------------------- | ------ | ------ | ------ | ------ | ------ |
-| Utf16ValueStringBuilder    | 171.12 | 172.75 | 178.69 | 173.26 | 1.84   |
-| ZString (format)           | 171.42 | 173.18 | 178.45 | 173.95 | 2.16   |
 | StringBuilder (shared)     | 166.43 | 167.77 | 173.96 | 168.67 | 2.11   |
 | StringBuilder(128, shared) | 169.06 | 170.86 | 174.62 | 171.40 | 1.60   |
+| Utf16ValueStringBuilder    | 171.12 | 172.75 | 178.69 | 173.26 | 1.84   |
+| ZString (format)           | 171.42 | 173.18 | 178.45 | 173.95 | 2.16   |
 | XString (interpolated)     | 182.89 | 184.19 | 188.63 | 184.57 | 1.60   |
 | String (format)            | 191.48 | 193.78 | 197.95 | 194.30 | 1.62   |
 | String (interpolated)      | 193.24 | 194.32 | 200.48 | 195.13 | 1.85   |
-
 
 - Order by CPU load (Avg): StringBuilder (shared), StringBuilder(128) < Utf16ValueStringBuilder, ZString < XString < String.Format, string interpolation.
 - XString is slightly slower than ZString because it converts e.g. `(value, "D1")` into `AppendFormat("{0:D1}", value)`; that conversion uses stackalloc, so no extra heap allocation.
