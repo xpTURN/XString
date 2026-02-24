@@ -1,0 +1,19 @@
+{
+    "name": "xpTURN.XString.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "xpTURN.Polyfill.Runtime",
+        "ZString"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "System.Runtime.CompilerServices.Unsafe.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

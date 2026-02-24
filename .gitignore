@@ -1,0 +1,17 @@
+## Ignore system files
+**/.DS_Store
+
+## Ignore IDE/editor folders
+**/.vscode/
+
+**/[Xx][Ss]tring/*.csproj
+**/[Xx][Ss]tring/*.sln
+
+## Ignore Packages folders
+**/[Xx][Ss]tring/[Aa]ssets/[Pp]ackages
+
+## Ignore Library, Logs folders
+**/[Xx][Ss]tring/[Ll]ibrary
+**/[Xx][Ss]tring/[Ll]ogs
+**/[Xx][Ss]tring/[Tt]emp
+**/[Xx][Ss]tring/[Uu]ser[Ss]ettings
