@@ -105,6 +105,10 @@ XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 
 ## Performance benchmarks
 
+### Benchmark scenarios
+
+Each iteration creates a **new instance** (no StringBuilder reuse across iterations). This reflects real-world usage where callers typically create and discard builders per operation.
+
 ### Verification source code
 
 <details>
@@ -201,44 +205,45 @@ _ = sb.ToString();
 
 #### GC (Time.GC) — lower is better
 
-| Benchmark                    | GC Sum  | Note |
-| ---------------------------- | ------- | ---- |
-| Utf16ValueStringBuilder      | 80      | 👍   |
-| XString (interpolated)       | 80      | 👍   |
-| ZString (format)             | 80      | 👍   |
-| StringBuilder (128)          | 140–180 |      |
-| String (format)              | 200     |      |
-| String (interpolated)        | 200     |      |
-| StringBuilder                | 140–340 |      |
+| Benchmark                    | GC Sum  |
+| ---------------------------- | ------- |
+| Utf16ValueStringBuilder      | 80      |
+| ZString (format)             | 80      |
+| XString (interpolated)       | 80      |
+| StringBuilder (128)          | 140←180 |
+| StringBuilder                | 140←340 |
+| String (format)              | 200     |
+| String (interpolated)        | 200     |
 
 - Utf16ValueStringBuilder, XString, and ZString all show similar GC pressure. Only the final `new string()` for the return value is allocated.
 - For StringBuilder, setting capacity in advance helps. Each `AppendFormat` still creates temporary strings.
-- When a single StringBuilder instance is reused across iterations (Clear then reuse), GC Sum drops to around 140.
-
----
 
 #### Time (ms) — lower is better
 
-| Benchmark                  | Min    | Median | Max    | Avg    | StdDev |
-| -------------------------- | ------ | ------ | ------ | ------ | ------ |
-| StringBuilder (shared)     | 166.43 | 167.77 | 173.96 | 168.67 | 2.11   |
-| StringBuilder(128, shared) | 169.06 | 170.86 | 174.62 | 171.40 | 1.60   |
-| Utf16ValueStringBuilder    | 171.12 | 172.75 | 178.69 | 173.26 | 1.84   |
-| ZString (format)           | 171.42 | 173.18 | 178.45 | 173.95 | 2.16   |
-| XString (interpolated)     | 182.89 | 184.19 | 188.63 | 184.57 | 1.60   |
-| String (format)            | 191.48 | 193.78 | 197.95 | 194.30 | 1.62   |
-| String (interpolated)      | 193.24 | 194.32 | 200.48 | 195.13 | 1.85   |
+| Benchmark                  | Avg            |
+| -------------------------- | -------------- |
+| StringBuilder (128)        | 168.10←180.95  |
+| StringBuilder              | 169.03←278.89  |
+| Utf16ValueStringBuilder    | 170.65         |
+| ZString (format)           | 171.00         |
+| XString (interpolated)     | 184.13         |
+| String (format)            | 191.59         |
+| String (interpolated)      | 191.94         |
 
-- Order by CPU load (Avg): StringBuilder (shared), StringBuilder(128) < Utf16ValueStringBuilder, ZString < XString < String.Format, string interpolation.
-- XString is slightly slower than ZString because it converts e.g. `(value, "D1")` into `AppendFormat("{0:D1}", value)`; that conversion uses stackalloc, so no extra heap allocation.
+- For StringBuilder entries, test results are marked separately: (instance reuse) ← (individual instances).
+
+- Order by CPU load (Avg): StringBuilder(128) ≈ StringBuilder < Utf16ValueStringBuilder ≈ ZString < XString < String.Format ≈ String (interpolated)
+- ℹ️ XString is slightly slower than ZString because it converts e.g. `(value, "D1")` into `AppendFormat("{0:D1}", value)`; that conversion uses stackalloc, so no extra heap allocation.
 
 ---
 
 #### Summary
 
-- Using StringBuilder alone gives limited GC savings (especially considering coding cost).
-- Utf16ValueStringBuilder’s AppendFormat using stackalloc is key to low GC.
-- ZString and Utf16ValueStringBuilder perform very well. 👍
+- 🔴 StringBuilder without instance reuse results in worst GC allocation (340 vs 140).
+- 🔴 StringBuilder without initial capacity performs worst in both GC and time — buffer resizing causes heavy allocation and slowdown (340 vs 180).
+- Even with capacity hint (128) and instance reuse, StringBuilder still allocates more GC than ZString-based solutions.
+- 👍 ZString and Utf16ValueStringBuilder perform very well in both GC and time.
+- Utf16ValueStringBuilder's AppendFormat using stackalloc is key to low GC.
 - With XString interpolated strings, the compiler generates code similar to using Utf16ValueStringBuilder directly.
   - Consider XString when you want to reduce mistakes (e.g. argument order) while keeping good performance.
 
