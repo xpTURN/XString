@@ -216,7 +216,8 @@ _ = sb.ToString();
 | String (interpolated)        | 200     |
 
 - Utf16ValueStringBuilder, XString, and ZString all show similar GC pressure. Only the final `new string()` for the return value is allocated.
-- For StringBuilder, setting capacity in advance helps. Each `AppendFormat` still creates temporary strings.
+- StringBuilder usage suppresses GC allocation somewhat but still generates temporary strings during `AppendFormat` operations.
+  - This only applies when instances are reused and optimizations are carefully considered.
 
 #### Time (ms) — lower is better
 
