@@ -225,9 +225,11 @@ public ref struct _XS
             if (!FormatterCache<T>.TryFormatDelegate(value, buf, out var written, format))
             {
                 // Retry with larger heap-free buffer.
-                buf = stackalloc char[written > buf.Length ? written : buf.Length * 2];
+                buf = stackalloc char[buf.Length * 2];
                 if (!FormatterCache<T>.TryFormatDelegate(value, buf, out written, format))
-                    throw new FormatException("Failed to format value.");
+                {
+                    throw new FormatException($"Failed to format value. Type={typeof(T).Name}, alignment=0, format={format.ToString()}");
+                }
             }
             _sb.Append(buf.Slice(0, written));
             return;
@@ -241,9 +243,11 @@ public ref struct _XS
             Span<char> buf = stackalloc char[typeof(T).IsValueType ? Unsafe.SizeOf<T>() * 8 : DefaultFormatBuffer];
             if (!FormatterCache<T>.TryFormatDelegate(value, buf, out var written, format))
             {
-                buf = stackalloc char[written > buf.Length ? written : buf.Length * 2];
+                buf = stackalloc char[buf.Length * 2];
                 if (!FormatterCache<T>.TryFormatDelegate(value, buf, out written, format))
-                    throw new FormatException("Failed to format value.");
+                {
+                    throw new FormatException($"Failed to format value. Type={typeof(T).Name}, alignment={alignment}, format={format.ToString()}");
+                }
             }
 
             int padding = width - written;
