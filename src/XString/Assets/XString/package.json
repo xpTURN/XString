@@ -1,6 +1,6 @@
 {
   "name": "com.xpturn.xstring",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "xpTURN.XString",
   "description": "ZString API wrapper package for Unity. ZString does not provide a dedicated API for interpolated strings, so this package aims to provide `XString.Format($\"...\")` and format-string overloads.",
   "unity": "2022.3",
