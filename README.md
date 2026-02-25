@@ -148,24 +148,6 @@ _ = string.Format("User: {0} | Score: {1:N2} | At: {2:yyyy-MM-dd HH:mm} | Rate: 
 </details>
 
 <details>
-<summary>StringBuilder</summary>
-
-```csharp
-var sb = new StringBuilder();
-sb.Append("User: ");
-sb.Append(Label);
-sb.Append(" | Score: ");
-sb.AppendFormat("{0:N2}", Score);
-sb.Append(" | At: ");
-sb.AppendFormat("{0:yyyy-MM-dd HH:mm}", At);
-sb.Append(" | Rate: ");
-sb.AppendFormat("{0:P1}", Rate);
-_ = sb.ToString();
-```
-
-</details>
-
-<details>
 <summary>StringBuilder(128)</summary>
 
 ```csharp
@@ -210,10 +192,11 @@ _ = sb.ToString();
 | Utf16ValueStringBuilder      | 80      |
 | ZString (format)             | 80      |
 | XString (interpolated)       | 80      |
-| StringBuilder (128)          | 140←180 |
-| StringBuilder                | 140←340 |
+| StringBuilder (shared, 128)  | 140     |
+| StringBuilder (new, 128)     | 180     |
 | String (format)              | 200     |
 | String (interpolated)        | 200     |
+| StringBuilder (new, default) | 340     |
 
 - Utf16ValueStringBuilder, XString, and ZString all show similar GC pressure. Only the final `new string()` for the return value is allocated.
 - StringBuilder usage suppresses GC allocation somewhat but still generates temporary strings during `AppendFormat` operations.
@@ -221,30 +204,27 @@ _ = sb.ToString();
 
 #### Time (ms) — lower is better
 
-| Benchmark                  | Avg            |
-| -------------------------- | -------------- |
-| StringBuilder (128)        | 168.10←180.95  |
-| StringBuilder              | 169.03←278.89  |
-| Utf16ValueStringBuilder    | 170.65         |
-| ZString (format)           | 171.00         |
-| XString (interpolated)     | 184.13         |
-| String (format)            | 191.59         |
-| String (interpolated)      | 191.94         |
+| Benchmark                    | Avg      |
+| ---------------------------- | -------- |
+| Utf16ValueStringBuilder      | 196.93   |
+| ZString (format)             | 198.02   |
+| StringBuilder (shared, 128)  | 198.52   |
+| XString (interpolated)       | 198.96   |
+| StringBuilder (new, 128)     | 211.03   |
+| String (interpolated)        | 221.63   |
+| String (format)              | 224.10   |
+| StringBuilder (new, default) | 331.41   |
 
-- For StringBuilder entries, test results are marked separately: (instance reuse) ← (individual instances).
-
-- Order by CPU load (Avg): StringBuilder(128) ≈ StringBuilder < Utf16ValueStringBuilder ≈ ZString < XString < String.Format ≈ String (interpolated)
-- ℹ️ XString is slightly slower than ZString because it converts e.g. `(value, "D1")` into `AppendFormat("{0:D1}", value)`; that conversion uses stackalloc, so no extra heap allocation.
+- Order by CPU load (Avg): Utf16ValueStringBuilder ≈ ZString ≈ StringBuilder (shared) ≈ XString < StringBuilder (new, 128) < String.Format ≈ String (interpolated) << StringBuilder (new, default)
 
 ---
 
 #### Summary
 
-- 🔴 StringBuilder without instance reuse results in worst GC allocation (340 vs 140).
-- 🔴 StringBuilder without initial capacity performs worst in both GC and time — buffer resizing causes heavy allocation and slowdown (340 vs 180).
-- Even with capacity hint (128) and instance reuse, StringBuilder still allocates more GC than ZString-based solutions.
-- 👍 ZString and Utf16ValueStringBuilder perform very well in both GC and time.
-- Utf16ValueStringBuilder's AppendFormat using stackalloc is key to low GC.
+- 🔴 StringBuilder without initial capacity (`new StringBuilder()`) is by far the worst in both GC (340) and time (331 ms) — buffer resizing causes heavy allocation and slowdown.
+- 🔴 Even with capacity hint (`new StringBuilder(128)`), per-call allocation still adds overhead (GC 180, 211 ms).
+- ⚠️ StringBuilder with instance reuse (shared, 128) matches ZString-tier performance but requires careful lifecycle management.
+- 👍 ZString, Utf16ValueStringBuilder, and XString all achieve the lowest GC (80) and similar time (~197–199 ms).
 - With XString interpolated strings, the compiler generates code similar to using Utf16ValueStringBuilder directly.
   - Consider XString when you want to reduce mistakes (e.g. argument order) while keeping good performance.
 

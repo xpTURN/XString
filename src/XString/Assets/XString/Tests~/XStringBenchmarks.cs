@@ -88,11 +88,9 @@ namespace xpTURN.Text.Tests
         [Test, Performance]
         public static void StringBuilder_FourArgs()
         {
-            // Reuse the same StringBuilder instance across iterations (created once)
-            var sb = new StringBuilder();
             Measure.Method(() =>
             {
-                sb.Clear();
+                var sb = new StringBuilder();
                 sb.Append("User: ");
                 sb.Append(Label);
                 sb.Append(" | Score: ");
@@ -112,6 +110,29 @@ namespace xpTURN.Text.Tests
 
         [Test, Performance]
         public static void StringBuilder128_FourArgs()
+        {
+            Measure.Method(() =>
+            {
+                var sb = new StringBuilder(128);
+                sb.Append("User: ");
+                sb.Append(Label);
+                sb.Append(" | Score: ");
+                sb.AppendFormat("{0:N2}", Score);
+                sb.Append(" | At: ");
+                sb.AppendFormat("{0:yyyy-MM-dd HH:mm}", At);
+                sb.Append(" | Rate: ");
+                sb.AppendFormat("{0:P1}", Rate);
+                _ = sb.ToString();
+            })
+                .WarmupCount(WarmupCount)
+                .IterationsPerMeasurement(IterationsPerMeasurement)
+                .MeasurementCount(MeasurementCount)
+                .GC()
+                .Run();
+        }
+
+        [Test, Performance]
+        public static void StringBuilderShare_FourArgs()
         {
             // Reuse the same StringBuilder instance across iterations (created once)
             var sb = new StringBuilder(128);
