@@ -6,7 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Cysharp.Text;
+using TMPro;
+using UnityEngine;
 using xpTURN.Text;
+using xpTURN.Text.XInterpolatedStringHandler;
 
 namespace xpTURN.Text.Tests
 {
@@ -842,6 +845,7 @@ namespace xpTURN.Text.Tests
         public void Format_Concurrent_WithComplexFormatting_MultipleThreads()
         {
             // Test concurrent formatting with alignment, format specifiers, and culture-specific formatting
+            var culture = CultureInfo.InvariantCulture;
             var results = new ConcurrentDictionary<int, string>();
             var threads = new Thread[3];
 
@@ -850,6 +854,8 @@ namespace xpTURN.Text.Tests
                 int threadId = t;
                 threads[t] = new Thread(() =>
                 {
+                    Thread.CurrentThread.CurrentCulture = culture;
+                    Thread.CurrentThread.CurrentUICulture = culture;
                     for (int i = 0; i < 50; i++)
                     {
                         var value = i * 10.5m;
@@ -866,6 +872,17 @@ namespace xpTURN.Text.Tests
                 thread.Join();
 
             Assert.That(results.Count, Is.EqualTo(150));
+
+            for (int t = 0; t < 3; t++)
+            {
+                for (int i = 0; i < 50; i++)
+                {
+                    var value = i * 10.5m;
+                    var expected = $"T{t}: {value.ToString("F2", culture),15}";
+                    Assert.That(results[t * 1000 + i], Is.EqualTo(expected),
+                        $"Mismatch at thread={t}, i={i}");
+                }
+            }
         }
 
         [Test]
@@ -966,6 +983,288 @@ namespace xpTURN.Text.Tests
             // results[4] and results[5] depend on culture/formatting, just verify they exist
             Assert.That(results[4], Is.Not.Null);
             Assert.That(results[5], Is.Not.Null);
+        }
+
+        // --- Enum interpolation tests ---
+
+        private enum Color { Red, Green, Blue }
+
+        [Flags]
+        private enum Permission { None = 0, Read = 1, Write = 2, Execute = 4 }
+
+        [Test]
+        public void Format_Interpolated_Enum_EmbedsName()
+        {
+            var result = XString.Format($"{Color.Red}");
+            Assert.That(result, Is.EqualTo("Red"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_WithLiteral()
+        {
+            var result = XString.Format($"color={Color.Blue}");
+            Assert.That(result, Is.EqualTo("color=Blue"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_Variable()
+        {
+            Color c = Color.Green;
+            var result = XString.Format($"selected={c}");
+            Assert.That(result, Is.EqualTo("selected=Green"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_WithAlignment()
+        {
+            var result = XString.Format($"{Color.Red,10}");
+            Assert.That(result, Is.EqualTo(string.Format("{0,10}", Color.Red)));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_LeftAlign()
+        {
+            var result = XString.Format($"{Color.Red,-10}");
+            Assert.That(result, Is.EqualTo(string.Format("{0,-10}", Color.Red)));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_WithFormat_D()
+        {
+            var result = XString.Format($"{Color.Blue:D}");
+            Assert.That(result, Is.EqualTo("2"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_WithFormat_X()
+        {
+            var result = XString.Format($"{Color.Blue:X}");
+            Assert.That(result, Is.EqualTo(Color.Blue.ToString("X")));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_WithAlignmentAndFormat()
+        {
+            var result = XString.Format($"{Color.Green,10:D}");
+            Assert.That(result, Is.EqualTo(string.Format("{0,10:D}", Color.Green)));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_Flags()
+        {
+            var perm = Permission.Read | Permission.Write;
+            var result = XString.Format($"perm={perm}");
+            Assert.That(result, Is.EqualTo($"perm={perm.ToString()}"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_Flags_WithFormat_D()
+        {
+            var perm = Permission.Read | Permission.Execute;
+            var result = XString.Format($"{perm:D}");
+            Assert.That(result, Is.EqualTo(perm.ToString("D")));
+        }
+
+        [Test]
+        public void Format_Interpolated_NullableEnum_Null()
+        {
+            Color? c = null;
+            var result = XString.Format($"color={c}");
+            Assert.That(result, Is.EqualTo("color="));
+        }
+
+        [Test]
+        public void Format_Interpolated_NullableEnum_HasValue()
+        {
+            Color? c = Color.Green;
+            var result = XString.Format($"color={c}");
+            Assert.That(result, Is.EqualTo("color=Green"));
+        }
+
+        [Test]
+        public void Format_Interpolated_NullableEnum_Null_WithAlignment()
+        {
+            Color? c = null;
+            var result = XString.Format($"[{c,8}]");
+            Assert.That(result, Is.EqualTo("[        ]"));
+        }
+
+        [Test]
+        public void Format_Interpolated_Enum_Multiple()
+        {
+            var result = XString.Format($"{Color.Red},{Color.Green},{Color.Blue}");
+            Assert.That(result, Is.EqualTo("Red,Green,Blue"));
+        }
+
+        // --- Direct handler null tests ---
+
+        [Test]
+        public void Handler_AppendLiteral_Null_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendLiteral("a");
+            handler.AppendLiteral(null);
+            handler.AppendLiteral("b");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("ab"));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_String_Null_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendLiteral("x");
+            handler.AppendFormatted((string)null);
+            handler.AppendLiteral("y");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("xy"));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_GenericString_Null_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted<string>(null);
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_GenericObject_Null_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendLiteral("[");
+            handler.AppendFormatted<object>(null);
+            handler.AppendLiteral("]");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("[]"));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_NullableInt_Null_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted<int?>(null);
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_GenericNull_WithFormat_AppendsNothing()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted<double?>(null, "F2");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_GenericNull_WithAlignment_AppendsPadding()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted<string>(null, 5);
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("     "));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_GenericNull_WithAlignmentAndFormat_AppendsPadding()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted<int?>(null, 8, "N0");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("        "));
+        }
+
+        [Test]
+        public void Handler_AppendFormatted_StringNull_WithAlignmentAndFormat_AppendsPadding()
+        {
+            var handler = new _XS(0, 0);
+            handler.AppendFormatted((string)null, 6, "X");
+            var result = handler.GetString();
+            handler.Dispose();
+            Assert.That(result, Is.EqualTo("      "));
+        }
+
+        // --- SetTextX tests ---
+
+        [Test]
+        public void SetTextX_Interpolated_SetsTextWithoutAllocation()
+        {
+            var go = new GameObject("TMP_Test");
+            var tmp = go.AddComponent<TextMeshPro>();
+            try
+            {
+                tmp.SetTextX($"HP: {100}");
+                Assert.That(tmp.text, Is.EqualTo("HP: 100"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetTextX_Interpolated_WithFormat()
+        {
+            var go = new GameObject("TMP_Test");
+            var tmp = go.AddComponent<TextMeshPro>();
+            try
+            {
+                tmp.SetTextX($"Score: {1234.5:F1}");
+                Assert.That(tmp.text, Is.EqualTo($"Score: {1234.5:F1}"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetTextX_Interpolated_MultipleValues()
+        {
+            var go = new GameObject("TMP_Test");
+            var tmp = go.AddComponent<TextMeshPro>();
+            try
+            {
+                tmp.SetTextX($"Lv.{10} ATK:{250} DEF:{180}");
+                Assert.That(tmp.text, Is.EqualTo("Lv.10 ATK:250 DEF:180"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetTextX_Interpolated_EmptyString()
+        {
+            var go = new GameObject("TMP_Test");
+            var tmp = go.AddComponent<TextMeshPro>();
+            try
+            {
+                tmp.SetTextX($"");
+                Assert.That(tmp.text, Is.EqualTo(""));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void SetTextX_NullLabel_DoesNotThrow()
+        {
+            TMP_Text label = null;
+            Assert.DoesNotThrow(() => label.SetTextX($"test {42}"));
         }
     }
 }

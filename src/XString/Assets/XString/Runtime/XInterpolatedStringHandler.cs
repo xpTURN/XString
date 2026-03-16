@@ -35,6 +35,8 @@ public ref struct _XS
         return _sb.ToString();
     }
 
+    public Utf16ValueStringBuilder GetBuilder() => _sb;
+
     /// <summary>Releases the internal StringBuilder.</summary>
     public void Dispose()
     {
@@ -222,11 +224,11 @@ public ref struct _XS
         {
             // No alignment: format to stack buffer, then append.
             Span<char> buf = stackalloc char[typeof(T).IsValueType ? Unsafe.SizeOf<T>() * 8 : DefaultFormatBuffer];
-            if (!FormatterCache<T>.TryFormatDelegate(value, buf, out var written, format))
+            if (!TryFormatValue(value, buf, out var written, format))
             {
                 // Retry with larger heap-free buffer.
                 buf = stackalloc char[buf.Length * 2];
-                if (!FormatterCache<T>.TryFormatDelegate(value, buf, out written, format))
+                if (!TryFormatValue(value, buf, out written, format))
                 {
                     throw new FormatException($"Failed to format value. Type={typeof(T).Name}, alignment=0, format={format.ToString()}");
                 }
@@ -241,10 +243,10 @@ public ref struct _XS
             bool leftJustify = alignment < 0;
 
             Span<char> buf = stackalloc char[typeof(T).IsValueType ? Unsafe.SizeOf<T>() * 8 : DefaultFormatBuffer];
-            if (!FormatterCache<T>.TryFormatDelegate(value, buf, out var written, format))
+            if (!TryFormatValue(value, buf, out var written, format))
             {
                 buf = stackalloc char[buf.Length * 2];
-                if (!FormatterCache<T>.TryFormatDelegate(value, buf, out written, format))
+                if (!TryFormatValue(value, buf, out written, format))
                 {
                     throw new FormatException($"Failed to format value. Type={typeof(T).Name}, alignment={alignment}, format={format.ToString()}");
                 }
@@ -261,6 +263,74 @@ public ref struct _XS
                 if (padding > 0) _sb.Append(' ', padding);
                 _sb.Append(buf.Slice(0, written));
             }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryFormatValue<T>(T value, Span<char> dest, out int written, ReadOnlySpan<char> format)
+    {
+        if (typeof(T).IsEnum && !format.IsEmpty)
+            return TryFormatEnum(value, dest, out written, format);
+        return FormatterCache<T>.TryFormatDelegate(value, dest, out written, format);
+    }
+
+    private static bool TryFormatEnum<T>(T value, Span<char> dest, out int written, ReadOnlySpan<char> format)
+    {
+        if (format.Length == 1)
+        {
+            char f = format[0];
+            if (f == 'D' || f == 'd')
+                return TryFormatEnumUnderlying(value, dest, out written, default);
+            if (f == 'X' || f == 'x')
+            {
+                int hexDigits = Unsafe.SizeOf<T>() * 2;
+                Span<char> hexFmt = stackalloc char[3];
+                hexFmt[0] = f;
+                if (hexDigits >= 10)
+                {
+                    hexFmt[1] = (char)('0' + hexDigits / 10);
+                    hexFmt[2] = (char)('0' + hexDigits % 10);
+                    return TryFormatEnumUnderlying(value, dest, out written, hexFmt);
+                }
+                hexFmt[1] = (char)('0' + hexDigits);
+                return TryFormatEnumUnderlying(value, dest, out written, hexFmt.Slice(0, 2));
+            }
+        }
+
+        // G, F, or other: fallback via IFormattable (boxes)
+        var s = ((IFormattable)(object)value).ToString(format.ToString(), null);
+        if (s.AsSpan().TryCopyTo(dest))
+        {
+            written = s.Length;
+            return true;
+        }
+        written = 0;
+        return false;
+    }
+
+    private static bool TryFormatEnumUnderlying<T>(T value, Span<char> dest, out int written, ReadOnlySpan<char> numericFormat)
+    {
+        switch (Type.GetTypeCode(typeof(T)))
+        {
+            case TypeCode.Int32:
+                return Unsafe.As<T, int>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.UInt32:
+                return Unsafe.As<T, uint>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.Int64:
+                return Unsafe.As<T, long>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.UInt64:
+                return Unsafe.As<T, ulong>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.Int16:
+                return Unsafe.As<T, short>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.UInt16:
+                return Unsafe.As<T, ushort>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.Byte:
+                return Unsafe.As<T, byte>(ref value).TryFormat(dest, out written, numericFormat, null);
+            case TypeCode.SByte:
+                return Unsafe.As<T, sbyte>(ref value).TryFormat(dest, out written, numericFormat, null);
+            default:
+                written = 0;
+                return false;
         }
     }
 

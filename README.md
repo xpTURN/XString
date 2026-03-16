@@ -89,6 +89,28 @@ XString.Format("{0} + {1}", "a", "b");
 XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 ```
 
+### Enum format specifiers
+
+Enum format specifiers (`D`, `X`, `G`, `F`) work correctly in interpolated strings. `D` and `X` use `Unsafe.As` for zero-boxing formatting.
+
+```csharp
+var action = ActionType.Playing;
+XString.Format($"{action:D}");   // "3"
+XString.Format($"{action:X}");   // "00000003"
+XString.Format($"{action}");     // "Playing"
+```
+
+### Zero-alloc TMP_Text update
+
+`SetTextX` passes the internal `char[]` buffer directly to `TMP_Text.SetCharArray`, bypassing `ToString()`.
+
+```csharp
+using xpTURN.Text;
+
+label.SetTextX($"HP: {hp} / {maxHp}");
+// No string allocation — only TMP internal processing allocates
+```
+
 ### Other APIs
 
 | Method                                        | Description                                                         |
@@ -98,6 +120,7 @@ XString.Format("{0}-{1}-{2}-{3}", "A","B","C","D");
 | `XString.CreateUtf8StringBuilder()`           | Create Utf8 StringBuilder (ZString wrapper)                         |
 | `XString.Join(separator, values)`             | Join sequence with separator (ZString wrapper)                      |
 | `XString.Concat(values)`                      | Concatenate arguments in order (ZString wrapper)                    |
+| `label.SetTextX($"...")`                      | Set interpolated string to TMP_Text with zero string allocation     |
 
 ## Namespace
 

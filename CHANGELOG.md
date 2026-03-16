@@ -2,6 +2,26 @@
 
 ---
 
+## [0.1.4] - 2026-03-16
+
+### New Features
+
+#### Enum Format Specifier Support
+
+- Added `TryFormatEnum` / `TryFormatEnumUnderlying` in `_XS` handler
+- `D`, `d`: formats enum as decimal numeric value via `Unsafe.As<T, underlying>` — zero boxing
+- `X`, `x`: formats enum as hex with zero-padded digits matching underlying type size (e.g. int → `X8`)
+- `G`, `F`, and other specifiers: fallback to `IFormattable.ToString` (boxes)
+- Previously all enum format specifiers were ignored (ZString `EnumUtil<T>` limitation)
+
+#### `SetTextX` Extension Method for TMP_Text
+
+- `TMP_Text.SetTextX($"...")` sets interpolated string to TextMeshPro with zero string allocation
+- Passes internal `char[]` buffer directly via `SetCharArray` (bypasses `ToString()`)
+- Benchmark: GC 5 (TMP internal only) vs GC 12 (`tmp.text = $"..."`)
+
+---
+
 ## [0.1.3] - 2026-02-26
 
 ### Bug Fixes

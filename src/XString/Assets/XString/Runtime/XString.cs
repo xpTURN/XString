@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 
+using TMPro;
+
 using Cysharp.Text;
 using xpTURN.Text.XInterpolatedStringHandler;
 
@@ -18,6 +20,24 @@ public static class XString
         try
         {
             return handler.GetString();
+        }
+        finally
+        {
+            handler.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Sets an interpolated string to <see cref="TMP_Text"/> with zero GC allocation.
+    /// The internal char[] buffer is passed directly via <see cref="TMP_Text.SetCharArray"/>.
+    /// </summary>
+    public static void SetTextX(this TMP_Text label, [InterpolatedStringHandlerArgument] ref _XS handler)
+    {
+        try
+        {
+            if (label == null) return;
+            var seg = handler.GetBuilder().AsArraySegment();
+            label.SetCharArray(seg.Array, seg.Offset, seg.Count);
         }
         finally
         {

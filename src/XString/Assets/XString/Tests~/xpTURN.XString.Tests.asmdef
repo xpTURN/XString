@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "Unity.PerformanceTesting",
         "xpTURN.XString.Runtime",
-        "ZString"
+        "ZString",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
